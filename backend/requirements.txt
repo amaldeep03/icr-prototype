@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+openai
+pdf2image
+Pillow
+pytesseract
+numpy
+rapidfuzz
+python-dateutil
+python-dotenv

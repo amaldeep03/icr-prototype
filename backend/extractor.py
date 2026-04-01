@@ -167,6 +167,12 @@ def extract_document(file_base64: str, file_type: str, doc_type: str) -> dict:
     if doc_type not in PROMPTS:
         raise ValueError(f"Unknown doc_type: {doc_type}")
 
+    # Policy illustration PDFs → chunked text pipeline (better accuracy, lower cost)
+    if doc_type == "policy_illustration" and file_type == "application/pdf":
+        from illustration_extractor import extract_policy_illustration
+        raw_bytes = base64.b64decode(file_base64)
+        return extract_policy_illustration(raw_bytes)
+
     # Convert PDF to image — OpenAI vision does not accept PDFs directly
     if file_type == "application/pdf":
         raw_bytes = base64.b64decode(file_base64)

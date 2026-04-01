@@ -67,6 +67,38 @@ async def test_id_ocr(government_id: UploadFile = File(...)):
     }
 
 
+@app.post("/api/test-illustration-extraction")
+async def test_illustration_extraction(policy_illustration: UploadFile = File(...)):
+    """
+    Debug endpoint for the chunked policy illustration pipeline.
+
+    Returns:
+    - chunks: every semantic chunk with its zone classification and a text preview
+    - extraction: the final merged extraction result
+    - chunk_count_by_zone: summary of how many chunks landed in each zone
+
+    Use this to inspect what the chunker sees and how zones are assigned
+    before any LLM extraction runs — helpful for tuning without burning API tokens.
+    Only accepts PDF uploads.
+    """
+    from illustration_extractor import get_extraction_debug, extract_policy_illustration
+
+    content = await policy_illustration.read()
+
+    if policy_illustration.content_type != "application/pdf":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="This endpoint only accepts PDF files.")
+
+    debug = get_extraction_debug(content)
+    extraction = extract_policy_illustration(content)
+
+    return {
+        "filename": policy_illustration.filename,
+        **debug,
+        "extraction": extraction,
+    }
+
+
 @app.post("/api/evaluate-case")
 async def evaluate_case(
     application_form: Optional[UploadFile] = File(None),

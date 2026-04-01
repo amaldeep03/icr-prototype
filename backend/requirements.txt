@@ -3,6 +3,7 @@ uvicorn
 python-multipart
 openai
 pdf2image
+pdfplumber
 Pillow
 pytesseract
 numpy

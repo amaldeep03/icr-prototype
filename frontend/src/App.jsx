@@ -5,7 +5,9 @@ import ExtractionPanel from './components/ExtractionPanel'
 import ValidationPanel from './components/ValidationPanel'
 import CaseScoreCard from './components/CaseScoreCard'
 
-const API_BASE = 'http://localhost:8000'
+// Read API base from Vite environment variable (set in frontend/.env or at build time).
+// Falls back to localhost for development when not provided.
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
 const EMPTY_FILES = {
   application_form: null,

@@ -1,4 +1,5 @@
 import base64
+import os
 import uuid
 from typing import Optional
 
@@ -17,9 +18,14 @@ load_dotenv()
 
 app = FastAPI(title="ICR Intelligent Onboarding API")
 
+# Configure CORS origins via environment. Use comma-separated list in backend/.env
+# Example: CORS_ALLOW_ORIGINS=http://localhost:5173,http://localhost:3000
+cors_origins = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173,http://localhost:3000")
+allowed_origins = [o.strip() for o in cors_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

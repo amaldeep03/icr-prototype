@@ -1,6 +1,7 @@
 import base64
 import os
 import uuid
+import asyncio
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -33,13 +34,24 @@ app.add_middleware(
 
 
 async def _read_and_extract(upload: Optional[UploadFile], doc_type: str) -> Optional[dict]:
+    """Read upload bytes then run the (potentially blocking) extractor in a thread.
+
+    The extractor calls into OpenAI, PDF/image libraries and Tesseract which are
+    blocking — use asyncio.to_thread so multiple extractions can run in parallel
+    without blocking the event loop.
+    """
     if upload is None:
         return None
     # Import here so the server starts even when OPENAI_API_KEY is not set
     from extractor import extract_document
+
     content = await upload.read()
     file_b64 = base64.b64encode(content).decode("utf-8")
-    return extract_document(file_b64, upload.content_type, doc_type)
+
+    # Run the CPU / network bound extraction in a thread to avoid blocking
+    # the ASGI event loop. asyncio.to_thread will schedule the call on the
+    # default threadpool and return the result asynchronously.
+    return await asyncio.to_thread(extract_document, file_b64, upload.content_type, doc_type)
 
 
 @app.post("/api/test-id-ocr")
@@ -111,15 +123,24 @@ async def evaluate_case(
     government_id: Optional[UploadFile] = File(None),
     policy_illustration: Optional[UploadFile] = File(None),
 ):
-    # Extract all provided documents
+    # Extract all provided documents in parallel where possible — these are
+    # independent operations that may call external APIs or perform CPU work.
     extractions = {}
 
+    tasks = {}
     if application_form:
-        extractions["application_form"] = await _read_and_extract(application_form, "application_form")
+        tasks["application_form"] = asyncio.create_task(_read_and_extract(application_form, "application_form"))
     if government_id:
-        extractions["government_id"] = await _read_and_extract(government_id, "government_id")
+        tasks["government_id"] = asyncio.create_task(_read_and_extract(government_id, "government_id"))
     if policy_illustration:
-        extractions["policy_illustration"] = await _read_and_extract(policy_illustration, "policy_illustration")
+        tasks["policy_illustration"] = asyncio.create_task(_read_and_extract(policy_illustration, "policy_illustration"))
+
+    if tasks:
+        # Await all extraction tasks concurrently. If one fails the exception
+        # will propagate — this matches the previous behavior (fail fast).
+        done = await asyncio.gather(*tasks.values())
+        for key, value in zip(tasks.keys(), done):
+            extractions[key] = value
 
     # Validation (only runs checks where both documents exist)
     validations = run_validations(extractions)

@@ -10,3 +10,5 @@ numpy
 rapidfuzz
 python-dateutil
 python-dotenv
+langgraph
+langsmith

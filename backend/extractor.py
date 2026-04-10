@@ -20,7 +20,18 @@ def _get_client() -> OpenAI:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY not set — add it to backend/.env")
-        _client = OpenAI(api_key=api_key)
+        raw = OpenAI(api_key=api_key)
+        # Wrap with LangSmith tracing when LANGCHAIN_API_KEY is set.
+        # wrap_openai patches the client in-place so every chat.completions.create
+        # call (vision passes, classify, illustration parsing) is captured with
+        # token counts and cost — no other code changes needed.
+        if os.getenv("LANGCHAIN_API_KEY"):
+            try:
+                from langsmith import wrappers
+                raw = wrappers.wrap_openai(raw)
+            except ImportError:
+                pass  # langsmith not installed — tracing silently disabled
+        _client = raw
     return _client
 
 # ── Prompts ────────────────────────────────────────────────────────────────────
@@ -40,6 +51,17 @@ Extract the following fields and return ONLY a valid JSON object with these exac
   "pincode": "",
   "phone": "",
   "email": "",
+  "place_of_birth": "",
+  "nationality": "",
+  "is_us_person": null,
+  "height_cm": "",
+  "weight_kg": "",
+  "health_declaration_answered": null,
+  "question_14_answer": "",
+  "payout_option": "",
+  "payment_method": "",
+  "insured_signature_present": null,
+  "payor_signature_present": null,
   "nominee_name": "",
   "nominee_relationship": "",
   "sum_assured": "",
@@ -60,6 +82,25 @@ Field extraction rules:
 - pincode: "Zip Code" field (4-digit Philippine postal code).
 - phone: "Mobile Number" field.
 - email: "Email" field.
+- place_of_birth: "Place of Birth" field for the Proposed Insured.
+- nationality: "Nationality" or "Citizenship" field for the Proposed Insured.
+- is_us_person: true if any US indicia found (US place of birth, US nationality/citizenship, US address,
+  US phone number, or US-issued ID indicated on the form); false if explicitly declared as non-US person;
+  null if not determinable from the form.
+- height_cm: Height field — return as numeric string in cm. If given in feet/inches convert to cm. Null if not found.
+- weight_kg: Weight field — return as numeric string in kg. If given in pounds convert to kg. Null if not found.
+- health_declaration_answered: true if the Non-Medical Questions / Health Declaration section appears to be
+  filled in (at least one yes/no answer present); false if the section is blank; null if not visible.
+- question_14_answer: The answer to question #14 in the declaration / intermediary section of the form.
+  Return "Yes", "No", or null if question 14 is not present or not answered.
+- payout_option: The selected payout or dividend option (e.g., "Automatic transfer to my account",
+  "Cash dividend", "Paid-up addition"). Return exactly as printed; null if not present.
+- payment_method: How the premium is paid — e.g., "Direct Debit", "Check", "Cash", "Post-dated Checks".
+  Null if not stated.
+- insured_signature_present: true if a signature or initials appear in the Insured signature block; false if
+  the signature block exists but is blank; null if the signature area is not visible.
+- payor_signature_present: true if a signature or initials appear in the Payor / Applicant Owner signature
+  block; false if blank; null if not visible.
 - nominee_name: Beneficiary 1 "Name (last name, first name, middle name)" field.
 - nominee_relationship: "Relationship to Proposed Insured" for Beneficiary 1.
 - sum_assured: "Sum Assured" field — return as numeric string only (no PHP, commas, or spaces).
@@ -81,6 +122,9 @@ Extract the following fields and return ONLY a valid JSON object with these exac
   "annual_premium": "",
   "applicant_name": "",
   "applicant_dob": "YYYY-MM-DD",
+  "insured_age": "",
+  "insured_gender": "",
+  "is_substandard": null,
   "maturity_benefit": "",
   "death_benefit": ""
 }
@@ -93,6 +137,9 @@ Field extraction rules:
 - annual_premium: Total annual premium for Policy Year 1 to 5 (the first row in the premiums table) — numeric string only.
 - applicant_name: The proposed insured's name shown at the top of the document.
 - applicant_dob: Date of birth if explicitly shown; null if only age is displayed (do NOT guess from age).
+- insured_age: Age of the insured as shown in the illustration (e.g. "37"). Return as numeric string. Null if not shown.
+- insured_gender: Gender of the insured — "Male" or "Female". Null if not stated.
+- is_substandard: true if the illustration is marked as "Substandard" or shows a rating/extra premium; false if standard; null if not stated.
 - maturity_benefit: Any maturity or endowment benefit amount; for health/term plans this is often null.
 - death_benefit: The Death Benefit amount — numeric string only.
 
@@ -172,6 +219,12 @@ def extract_document(file_base64: str, file_type: str, doc_type: str) -> dict:
         from illustration_extractor import extract_policy_illustration
         raw_bytes = base64.b64decode(file_base64)
         return extract_policy_illustration(raw_bytes)
+
+    # Application form PDFs → multi-pass vision pipeline (avoids lost-in-middle)
+    if doc_type == "application_form" and file_type == "application/pdf":
+        from application_form_extractor import extract_application_form
+        raw_bytes = base64.b64decode(file_base64)
+        return extract_application_form(raw_bytes)
 
     # Convert PDF to image — OpenAI vision does not accept PDFs directly
     if file_type == "application/pdf":

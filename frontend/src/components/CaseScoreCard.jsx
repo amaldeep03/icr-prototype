@@ -1,5 +1,3 @@
-import React from 'react'
-
 const DOC_LABELS = {
   application_form: 'Application Form',
   government_id: 'Government ID',
@@ -77,12 +75,31 @@ function CompletenessBar({ docType, data }) {
   )
 }
 
-export default function CaseScoreCard({ caseScore, caseStatus, completeness, criticalFlags, warnings }) {
+const FORM_CATEGORY_LABELS = {
+  health:       { label: 'Health Insurance', hint: 'Section E health declaration applies. No Q14 / fund direction.', color: 'bg-teal-50 border-teal-200 text-teal-700' },
+  life_non_gae: { label: 'Life — Full Underwriting', hint: 'Medical UW required. Q14, beneficiary insurable interest, FNA apply.', color: 'bg-indigo-50 border-indigo-200 text-indigo-700' },
+  life_gae:     { label: 'Life — Guaranteed Acceptance', hint: 'No medical UW required. Q14 and signatures still required.', color: 'bg-violet-50 border-violet-200 text-violet-700' },
+  unknown:      { label: 'Form type not detected', hint: 'Maximum checks applied. Identify the form type manually.', color: 'bg-gray-50 border-gray-200 text-gray-600' },
+}
+
+export default function CaseScoreCard({ caseScore, caseStatus, completeness, criticalFlags, warnings, nbRequirements }) {
   if (caseScore === undefined || caseScore === null) return null
+
+  const cat = nbRequirements?.form_category || 'unknown'
+  const catCfg = FORM_CATEGORY_LABELS[cat] || FORM_CATEGORY_LABELS.unknown
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      <h2 className="text-lg font-bold text-gray-800 mb-6">Case Score</h2>
+      <div className="flex items-start justify-between mb-5">
+        <h2 className="text-lg font-bold text-gray-800">Case Score</h2>
+        {/* Form type chip */}
+        <div className={`flex flex-col items-end gap-0.5`}>
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${catCfg.color}`}>
+            {catCfg.label}
+          </span>
+          <span className="text-xs text-gray-400 text-right max-w-xs">{catCfg.hint}</span>
+        </div>
+      </div>
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
         {/* Circular score */}

@@ -1,34 +1,21 @@
-REQUIRED_FIELDS = {
-    # Based on Allianz PNB Life SIO Application Form
-    "application_form": [
-        "full_name",
-        "date_of_birth",
-        "gender",
-        "civil_status",
-        "address",
-        "phone",
-        "email",
-        "nominee_name",
-        "nominee_relationship",
-        "sum_assured",
-        "plan_name",
-        "payment_frequency",
-    ],
-    "government_id": [
-        "id_type",
-        "id_number",
-        "full_name",
-        "date_of_birth",
-    ],
-    # Based on Allianz eAZy Health Sales Illustration
-    "policy_illustration": [
-        "plan_name",
-        "sum_assured",
-        "annual_premium",
-        "applicant_name",
-        "death_benefit",
-    ],
-}
+from form_type import required_app_form_fields
+
+_GOV_ID_FIELDS = [
+    "id_type",
+    "id_number",
+    "full_name",
+    "date_of_birth",
+]
+
+_POLICY_ILLUSTRATION_FIELDS = [
+    "plan_name",
+    "sum_assured",
+    "annual_premium",
+    "applicant_name",
+    "insured_age",
+    "insured_gender",
+    "death_benefit",
+]
 
 WEIGHTS = {
     "application_form": 0.5,
@@ -40,19 +27,29 @@ CRITICAL_PENALTY = 15
 WARNING_PENALTY = 5
 
 
-def score_completeness(extractions: dict) -> dict:
+def _required_fields(product_type: str) -> dict:
+    return {
+        "application_form": required_app_form_fields(product_type),
+        "government_id": _GOV_ID_FIELDS,
+        "policy_illustration": _POLICY_ILLUSTRATION_FIELDS,
+    }
+
+
+def score_completeness(extractions: dict, product_type: str = "UNKNOWN") -> dict:
     """
-    Score completeness for each document individually.
+    Score completeness for each document individually, using only the fields
+    that are actually required for the identified product type.
 
     Returns:
         Dict keyed by doc_type with {"score": int, "missing": [str]}
     """
+    required = _required_fields(product_type)
     results = {}
-    for doc_type, required in REQUIRED_FIELDS.items():
+    for doc_type, fields in required.items():
         doc_data = extractions.get(doc_type) or {}
-        missing = [f for f in required if not doc_data.get(f)]
-        present = len(required) - len(missing)
-        score = round((present / len(required)) * 100) if required else 100
+        missing = [f for f in fields if not doc_data.get(f)]
+        present = len(fields) - len(missing)
+        score = round((present / len(fields)) * 100) if fields else 100
         results[doc_type] = {"score": score, "missing": missing}
     return results
 
@@ -64,7 +61,6 @@ def score_case(completeness: dict, validations: list[dict]) -> tuple[int, str]:
     Returns:
         (case_score: int, case_status: str)
     """
-    # Weighted completeness baseline
     weighted = sum(
         completeness[doc]["score"] * WEIGHTS[doc]
         for doc in WEIGHTS
@@ -72,9 +68,6 @@ def score_case(completeness: dict, validations: list[dict]) -> tuple[int, str]:
     )
     base_score = round(weighted)
 
-    # Apply penalties
-    # "fail"       → full penalty for the severity tier
-    # "unverified" on a critical check → half penalty (can't confirm, not a proven mismatch)
     penalties = 0
     for v in validations:
         if v["status"] == "fail":

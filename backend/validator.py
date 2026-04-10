@@ -81,6 +81,15 @@ VALIDATION_RULES = [
         "pass_msg": "Plan name matches across application form and policy illustration",
         "fail_msg": "Plan name mismatch between application form and policy illustration",
     },
+    {
+        "check": "fund_direction_match",
+        "fields": ["application_form.fund_direction", "policy_illustration.fund_direction"],
+        "method": "fuzzy",
+        "threshold": 80,
+        "severity": "warning",
+        "pass_msg": "Fund direction matches across application form and policy illustration",
+        "fail_msg": "Fund direction mismatch between application form and policy illustration",
+    },
 ]
 
 

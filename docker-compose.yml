@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      # ensure frontend dev origin is allowed by default when testing locally
+      - CORS_ALLOW_ORIGINS=http://localhost:5173
+    ports:
+      - "8000:8000"
+    healthcheck:
+      # Use Python (available in the backend image) to probe the local HTTP endpoint.
+      test: ["CMD-SHELL", "python -c 'import urllib.request,sys; r=urllib.request.urlopen(\"http://127.0.0.1:8000/api/mock-evaluation\"); sys.exit(0 if r.getcode()==200 else 1)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # For local testing the browser needs to reach the backend via the host port.
+        # Use localhost (host-mapped port 8000) so the static bundle's requests succeed
+        # from the user's browser: http://localhost:8000
+        VITE_API_BASE: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    # Frontend runs on nginx (alpine) which doesn't include curl or python by default.
+    # Omit the healthcheck to avoid false 'unhealthy' states; rely on Docker service status.

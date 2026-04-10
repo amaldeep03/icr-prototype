@@ -85,8 +85,12 @@ Extract the following fields and return ONLY a valid JSON object with these exac
   "annual_premium": "",
   "applicant_name": "",
   "applicant_dob": "YYYY-MM-DD",
+  "insured_age": "",
+  "insured_gender": "",
+  "is_substandard": null,
   "maturity_benefit": "",
-  "death_benefit": ""
+  "death_benefit": "",
+  "fund_direction": null
 }
 
 Field extraction rules:
@@ -102,9 +106,19 @@ Field extraction rules:
 - applicant_name: Full name of the proposed insured / client.
 - applicant_dob: Exact date of birth in YYYY-MM-DD. Return null if only age is shown — do
   NOT guess the birth year from the age.
+- insured_age: Age of the insured as shown in the illustration (e.g. "37"). Return as numeric
+  string. Null if not shown.
+- insured_gender: Gender of the insured as shown in the illustration — "Male" or "Female".
+  Null if not stated.
+- is_substandard: true if the illustration is marked as "Substandard" or shows a rating/extra
+  premium due to health/occupational loading; false if explicitly standard; null if not stated.
 - maturity_benefit: Maturity or endowment payout if explicitly stated; null for term/health plans.
 - death_benefit: Death benefit amount — numeric string only. For term plans this is the
   "Term Benefit" or "Life Benefit". For health plans it may not exist.
+- fund_direction: Fund direction or declared fund allocation shown in the illustration
+  (e.g. "Dividend Paying Fund", "Peso Equity Fund", "Peso Bond Fund", "Balanced Fund").
+  Only present on Unit-Linked / VUL / ULAM product illustrations. Return null for health
+  or traditional plans that do not have fund selection.
 
 If a field is not found in the document, return null for that key.
 No explanation, no markdown, no code fences — return only the JSON object."""
@@ -140,7 +154,9 @@ def extract_policy_illustration(file_bytes: bytes) -> dict:
         result = {
             "plan_name": None, "policy_term": None, "premium_payment_term": None,
             "sum_assured": None, "annual_premium": None, "applicant_name": None,
-            "applicant_dob": None, "maturity_benefit": None, "death_benefit": None,
+            "applicant_dob": None, "insured_age": None, "insured_gender": None,
+            "is_substandard": None, "maturity_benefit": None, "death_benefit": None,
+            "fund_direction": None,
         }
 
     return _normalize_dates(result, "policy_illustration")

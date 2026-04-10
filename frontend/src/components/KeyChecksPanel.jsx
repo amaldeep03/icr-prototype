@@ -131,7 +131,7 @@ function NotifyFSSButton({ requirementLabel, context, caseId }) {
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const BADGE = {
-  ok:      { label: 'OK',       cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+  ok:      { label: 'Pass',     cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
   flag:    { label: 'Flagged',  cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
   missing: { label: 'Missing',  cls: 'bg-red-50 text-red-700 border border-red-200' },
   na:      { label: 'N/A',      cls: 'bg-gray-50 text-gray-500 border border-gray-200' },
@@ -450,7 +450,7 @@ function CheckCard({ number, title, icon, status, children }) {
         <div className="flex items-center gap-2">
           <span className="text-xl leading-none">{icon}</span>
           <div>
-            <span className={`text-xs font-bold uppercase tracking-widest ${headerColors[status]}`}>Check {number}</span>
+            <span className={`text-xs font-bold uppercase tracking-widest ${headerColors[status]}`}>Validation {number}</span>
             <h3 className="text-sm font-bold text-gray-800 leading-tight">{title}</h3>
           </div>
         </div>
@@ -557,25 +557,28 @@ function NbRequirementsSection({ nbRequirements, caseId }) {
       </div>
 
       {/* Crucial requirements */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-4">
-        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-4 flex flex-col" style={{ maxHeight: '420px' }}>
+        {/* Fixed header */}
+        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 shrink-0">
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Crucial Requirements</h3>
           <p className="text-xs text-gray-400 mt-0.5">Missing crucial items block case processing</p>
         </div>
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-gray-50">
-              <th className="px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Requirement</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Status</th>
-              <th className="px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Note</th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide text-right w-32">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {crucial.map((item, i) => <NbRow key={i} item={item} caseId={caseId} />)}
-          </tbody>
-        </table>
+        <div className="overflow-y-auto flex-1">
+          <table className="w-full text-left">
+            <thead className="sticky top-0 bg-white z-10">
+              <tr className="border-b border-gray-50">
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Requirement</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Source</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide w-28">Status</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Note</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide text-right w-32">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {crucial.map((item, i) => <NbRow key={i} item={item} caseId={caseId} />)}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Minor requirements (collapsible) */}
@@ -587,7 +590,7 @@ function NbRequirementsSection({ nbRequirements, caseId }) {
           >
             <div>
               <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide text-left">
-                Minor Requirements & External Documents
+                Other Requirements & External Documents
                 <span className="ml-2 text-gray-400 font-normal normal-case">({minor.length} items{missingMinor > 0 ? `, ${missingMinor} missing` : ''})</span>
               </h3>
               <p className="text-xs text-gray-400 mt-0.5 text-left">Missing minor items trigger FSS attention but don't block processing</p>
@@ -627,7 +630,7 @@ export default function KeyChecksPanel({ extractions, nbRequirements, caseId }) 
       {/* Summary bar */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Key Underwriting Checks</h2>
+          <h2 className="text-base font-bold text-gray-900">Key Underwriting Validations</h2>
           <p className="text-xs text-gray-500 mt-0.5">8 required fields evaluated for Life GAE applications</p>
         </div>
         {missingCount > 0 ? (

@@ -15,14 +15,14 @@
 import { useState } from 'react'
 
 const CHECK_LABELS = {
-  name_match_form_vs_id:           { label: 'Name — Form vs. ID',                docs: ['Application Form', 'Government ID'] },
-  name_match_form_vs_policy:       { label: 'Name — Form vs. Sales Illustration', docs: ['Application Form', 'Sales Illustration'] },
-  dob_match_form_vs_id:            { label: 'Date of Birth — Form vs. ID',        docs: ['Application Form', 'Government ID'] },
-  dob_match_form_vs_policy:        { label: 'Date of Birth — Form vs. SI',        docs: ['Application Form', 'Sales Illustration'] },
-  pincode_match_form_vs_id:        { label: 'Postal Code — Form vs. ID',          docs: ['Application Form', 'Government ID'] },
-  sum_assured_match_form_vs_policy:{ label: 'Sum Assured — Form vs. SI',          docs: ['Application Form', 'Sales Illustration'] },
-  plan_name_match:                 { label: 'Plan Name — Form vs. SI',            docs: ['Application Form', 'Sales Illustration'] },
-  fund_direction_match:            { label: 'Fund Direction — Form vs. SI',       docs: ['Application Form', 'Sales Illustration'] },
+  name_match_form_vs_id:           { label: 'Full Name',         description: 'Insured name on the Application Form compared against the name on the submitted Government ID'           },
+  name_match_form_vs_policy:       { label: 'Full Name',         description: 'Insured name on the Application Form compared against the applicant name on the Sales Illustration'     },
+  dob_match_form_vs_id:            { label: 'Date of Birth',     description: 'Date of birth declared on the Application Form compared against the date of birth on the Government ID' },
+  dob_match_form_vs_policy:        { label: 'Date of Birth',     description: 'Date of birth on the Application Form compared against the insured birth date on the Sales Illustration'},
+  pincode_match_form_vs_id:        { label: 'Postal Code',       description: 'Postal code from the address on the Application Form compared against the address on the Government ID' },
+  sum_assured_match_form_vs_policy:{ label: 'Sum Assured',       description: 'Sum assured indicated on the Application Form compared against the coverage amount on the Sales Illustration' },
+  plan_name_match:                 { label: 'Plan Name',         description: 'Product plan name written on the Application Form compared against the plan shown on the Sales Illustration' },
+  fund_direction_match:            { label: 'Fund Direction',    description: 'Fund allocation direction on the Application Form compared against the fund direction declared on the Sales Illustration' },
 }
 
 function statusConfig(status) {
@@ -133,8 +133,11 @@ function ValidationRow({ validation, caseId, notifiedChecks, onNotify }) {
   return (
     <>
       <tr className={`border-b border-gray-50 last:border-0 ${st.row} transition-colors`}>
-        <td className="px-4 py-3.5">
-          <span className="text-sm font-medium text-gray-800">{cfg.label}</span>
+        <td className="px-4 py-3.5 min-w-[220px]">
+          <span className="text-sm font-semibold text-gray-800 block">{cfg.label}</span>
+          {cfg.description && (
+            <span className="text-xs text-gray-400 leading-snug block mt-0.5">{cfg.description}</span>
+          )}
         </td>
         <td className="px-3 py-3.5 text-xs text-gray-600">
           <span className="block max-w-[150px] truncate" title={String(valEntries[0]?.[1] ?? '')}>
@@ -242,20 +245,12 @@ export default function ValidationPanel({ validations, caseId }) {
         </div>
       </div>
 
-      {failCount > 0 && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
-          <span className="text-lg shrink-0 mt-0.5">📋</span>
-          <p className="text-xs text-amber-800 leading-relaxed">
-            <strong>FSS Notification Required:</strong> Per Allianz PNB Life NB guidelines, data mismatches require a manual notification to the Financial Services Support team to verify with the Financial Advisor. Use <strong>"Notify FSS"</strong> on each mismatched row.
-          </p>
-        </div>
-      )}
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/80">
-              <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Check</th>
+              <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Validation</th>
               <th className="px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Form Value</th>
               <th className="px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">ID / SI Value</th>
               <th className="px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center w-16">Score</th>
